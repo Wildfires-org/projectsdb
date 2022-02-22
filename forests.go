@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -49,10 +50,14 @@ func GetForests() ([]Forest, error) {
 	return forests, nil
 }
 
-func getIdFromUri(uri string) string {
+func getIdFromUri(uri string) int {
 	split := strings.Split(uri, "?")
 	if len(split) != 2 {
-		return "000000"
+		return 0
 	}
-	return split[1]
+	id, err := strconv.Atoi(split[1])
+	if err != nil {
+		return 0
+	}
+	return id
 }

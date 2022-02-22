@@ -11,15 +11,13 @@ import (
 
 func GetProjects(forests []Forest) []Forest {
 	for i, forest := range forests {
-		fmt.Printf("looking into the {%s}\n", forest.Name)
+		fmt.Printf("looking into the {%s} of {%s}\n", forest.Name, forest.State)
 		projectPages := getProjectPages(forest.Url)
 
-		if len(projectPages) == 0 {
-			continue
-		}
+		for _, projectPage := range projectPages {
+			forests[i].Projects = append(forests[i].Projects, getProjects(projectPage)...)
 
-		forests[i].Projects = getProjects(projectPages[0])
-		fmt.Printf("found %d projects\n", len(forests[i].Projects))
+		}
 	}
 	return forests
 }
@@ -87,12 +85,12 @@ func getProjects(url string) []Project {
 			case "Group of Projects":
 				region = []string{}
 				s.Find("td").Each(func(i int, s *goquery.Selection) {
-					region = append(region, s.Text())
+					region = append(region, trim(s.Text()))
 				})
 			case "ProjectDescription":
-				project.Description = s.Text()
+				project.SetDescription(trim(s.Text()))
 			case "ProjectLocation":
-				project.Location = s.Text()
+				project.Location = strings.Replace(trim(s.Text()), "Location: ", "", 1)
 				projects = append(projects, project)
 			}
 			return
@@ -107,19 +105,24 @@ func getProjects(url string) []Project {
 		}
 
 		s.Find("td").Each(func(i int, s *goquery.Selection) {
+			html, err := s.Html()
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			html = trim(html)
 			switch i {
 			case 0:
-				project.Name = s.Text()
+				project.SetName(html)
 			case 1:
-				project.Purpose = s.Text()
+				project.SetPurposes(s.Text())
 			case 2:
-				project.Status = s.Text()
+				project.SetStatus(html)
 			case 3:
-				project.Decision = s.Text()
+				project.Decision = trim(s.Text())
 			case 4:
-				project.ExpectedImplementation = s.Text()
+				project.ExpectedImplementation = trim(s.Text())
 			case 5:
-				project.Contact = s.Text()
+				project.SetContacts(html)
 			}
 		})
 	})
