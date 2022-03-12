@@ -7,18 +7,23 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
-	forests, err := GetForests()
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	fmt.Printf("Found {%d} forests\n", len(forests))
+	//forests, err := GetForests()
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//	return
+	//}
+	//fmt.Printf("Found {%d} forests\n", len(forests))
 
-	forests = GetProjects(forests)
-	err = saveProjectsCsv(forests)
+	string_with_description := "Description: some text blah"
+	new_str := strings.Replace(string_with_description, "Description: ", "", 1)
+	fmt.Printf("%v \n", new_str)
+
+	GetProjects([]Forest{{Name: "somethin", Url: "https://www.fs.fed.us/sopa/forest-level.php?110801"}})
+	//err = saveProjectsCsv(forests)
 }
 
 func saveProjectsJson(forests []Forest) error {
@@ -53,6 +58,8 @@ func saveProjectsCsv(forests []Forest) error {
 		"Project Description",
 		"Project Web Link",
 		"Project Region",
+		"Project SOPA Report Date",
+		"Project Code",
 	})
 	for _, forest := range forests {
 		writer.WriteAll(forest.AsCsv())
@@ -62,7 +69,7 @@ func saveProjectsCsv(forests []Forest) error {
 	return nil
 }
 
-func printProject(p Project) {
+func printProject(p ProjectUpdate) {
 	fmt.Println()
 	fmt.Printf("==== Name ==== \n%s \n", p.Name)
 	// fmt.Printf("==== Purposes ==== \n")

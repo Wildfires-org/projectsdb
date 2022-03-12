@@ -10,12 +10,12 @@ import (
 var baseUrl = "https://www.fs.fed.us"
 
 type Forest struct {
-	State       string    `json:"state"`
-	Name        string    `json:"name"`
-	Url         string    `json:"url"`
-	Id          int       `json:"id"`
-	SopaReports []string  `json:"sopa_reports"`
-	Projects    []Project `json:"projects"`
+	State       string          `json:"state"`
+	Name        string          `json:"name"`
+	Url         string          `json:"url"`
+	Id          int             `json:"id"`
+	SopaReports []string        `json:"sopa_reports"`
+	Projects    []ProjectUpdate `json:"projects"`
 }
 
 func (forest Forest) AsCsv() [][]string {
@@ -38,13 +38,15 @@ func (forest Forest) AsCsv() [][]string {
 			project.Contact.Phone,
 			project.Description,
 			project.WebLink,
-			strings.Join(project.Region, ", "),
+			project.Region,
+			project.District,
+			project.SopaReportDate,
 		}...))
 	}
 	return rows
 }
 
-type Project struct {
+type ProjectUpdate struct {
 	Name                   string   `json:"name"`
 	Purposes               []string `json:"purpose"`
 	Status                 string   `json:"status"`
@@ -54,15 +56,21 @@ type Project struct {
 	Description            string   `json:"description"`
 	WebLink                string   `json:"web_link"`
 	Location               string   `json:"location"`
-	Region                 []string `json:"region"`
+	Region                 string   `json:"region"`
+	District               string   `json:"district"`
+	SopaReportDate         string   `json:"sopa_report_date"`
+	ProjectCode            string   `json:"project_code"`
 }
 
-func (project *Project) SetName(html string) {
+func (project *ProjectUpdate) SetNameAndCode(html string) {
 	nameSplit := strings.Split(html, "<br/>")
 	project.Name = nameSplit[0] // TODO
+	if len(nameSplit) > 1 {
+		project.ProjectCode = nameSplit[1]
+	}
 }
 
-func (project *Project) SetPurposes(text string) {
+func (project *ProjectUpdate) SetPurposes(text string) {
 	purposes := strings.Split(text, " - ")
 	for i, purpose := range purposes {
 		purpose = strings.Trim(purpose, "-")
@@ -72,11 +80,11 @@ func (project *Project) SetPurposes(text string) {
 	project.Purposes = purposes
 }
 
-func (project *Project) SetStatus(html string) {
+func (project *ProjectUpdate) SetStatus(html string) {
 	project.Status = strings.ReplaceAll(html, "<br/>", "\n")
 }
 
-func (project *Project) SetContacts(html string) {
+func (project *ProjectUpdate) SetContacts(html string) {
 	contacts := strings.Split(html, "<br/>")
 	if len(contacts) != 3 {
 		fmt.Println(html)
@@ -89,16 +97,20 @@ func (project *Project) SetContacts(html string) {
 	}
 }
 
+func (project *ProjectUpdate) SetSopaReportDateFromURL(url string) {
+	project.SopaReportDate = url[len(url)-12 : len(url)-5] // example url: https://www.fs.fed.us/sopa/components/reports/sopa-110519-2021-07.html
+}
+
 var descriptionAndLink = regexp.MustCompile("Description:(.*)Web Link:(.*)")
 
-func (project *Project) SetDescription(text string) {
+func (project *ProjectUpdate) SetDescription(text string) {
 	if matches := descriptionAndLink.FindStringSubmatch(text); len(matches) == 3 {
 		project.Description = matches[1]
 		project.WebLink = matches[2]
 	} else {
-		project.Description = strings.Replace(text, "Description: ", "", 1)
+		project.Description = strings.Replace(text, "Description:", "", 1)
+		project.Description = project.Description[1:] // remove first char, which isn't an ascii space
 	}
-
 }
 
 type Contact struct {
