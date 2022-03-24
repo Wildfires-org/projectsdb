@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/nyaruka/phonenumbers"
 	"log"
 	"regexp"
 	"strings"
@@ -37,6 +38,7 @@ func (forest Forest) AsCsv() [][]string {
 			project.Contact.Email,
 			project.Contact.Phone,
 			project.Description,
+			project.Location,
 			project.WebLink,
 			project.Region,
 			project.District,
@@ -90,9 +92,12 @@ func (project *ProjectUpdate) SetContacts(html string) {
 		fmt.Println(html)
 		log.Fatal("bad contacts")
 	}
+	var phone_string = contacts[1]                                             // TODO phonenumbers doesnt seem to handle numbers starting with 0 well
+	phone_number, _ := phonenumbers.Parse(strings.ToLower(phone_string), "US") // format phone number, toLower catches more "ext" strings
+	formatted_number := phonenumbers.Format(phone_number, phonenumbers.NATIONAL)
 	project.Contact = Contact{
 		Name:  contacts[0],
-		Phone: contacts[1],
+		Phone: formatted_number,
 		Email: contacts[2],
 	}
 }
