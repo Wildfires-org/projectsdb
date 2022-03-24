@@ -143,6 +143,8 @@ func saveProjectsCsv(forests []Forest) error {
 		"Project Description",
 		"Project Web Link",
 		"Project Region",
+		"Project SOPA Report Date",
+		"Project Code",
 	})
 	for _, forest := range forests {
 		writer.WriteAll(forest.AsCsv())
@@ -177,7 +179,7 @@ func uploadReport(doc ProjectDocument, projectId int, uploader *s3manager.Upload
 	return nil
 }
 
-func printProject(p Project) {
+func printProject(p ProjectUpdate) {
 	fmt.Println()
 	fmt.Printf("==== Name ==== \n%s \n", p.Name)
 	// fmt.Printf("==== Purposes ==== \n")

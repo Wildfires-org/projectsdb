@@ -52,7 +52,7 @@ func getProjectPages(url string) []string {
 	return projectPages
 }
 
-func getProjects(url string) []Project {
+func getProjects(url string) []ProjectUpdate {
 	// get nav page html
 	res, err := http.Get(url)
 	if err != nil {
@@ -69,9 +69,9 @@ func getProjects(url string) []Project {
 		log.Fatal(err)
 	}
 
-	var region []string
-	var project Project
-	projects := []Project{}
+	var region []string // region and district
+	var project ProjectUpdate
+	projects := []ProjectUpdate{}
 	doc.Find("table tbody tr").Each(func(i int, s *goquery.Selection) {
 		// ignore first tree
 		if i < 3 {
@@ -100,19 +100,28 @@ func getProjects(url string) []Project {
 			return
 		}
 
-		project = Project{
-			Region: region,
+		// if no region assume national
+		if region[1] == "" {
+			region[1] = "National"
 		}
+
+		project = ProjectUpdate{
+			Region:   region[1],
+			District: region[0],
+		}
+
+		// Set sopa report date on each project update
+		project.SetSopaReportDateFromURL(url)
 
 		s.Find("td").Each(func(i int, s *goquery.Selection) {
 			html, err := s.Html()
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			html = trim(html)
+			html = trim(html) // TODO we're parsing the spaced in between projects, probably shouldn't
 			switch i {
 			case 0:
-				project.SetName(html)
+				project.SetNameAndCode(html)
 			case 1:
 				project.SetPurposes(s.Text())
 			case 2:
