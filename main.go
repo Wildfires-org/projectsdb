@@ -56,6 +56,7 @@ func saveProjectsCsv(forests []Forest) error {
 		"Project Contact Email",
 		"Project Contact Phone",
 		"Project Description",
+		"Project Location",
 		"Project Web Link",
 		"Project Region",
 		"Project SOPA Report Date",

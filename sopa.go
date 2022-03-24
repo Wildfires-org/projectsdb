@@ -90,7 +90,8 @@ func getProjects(url string) []ProjectUpdate {
 			case "ProjectDescription":
 				project.SetDescription(trim(s.Text()))
 			case "ProjectLocation":
-				project.Location = strings.Replace(trim(s.Text()), "Location: ", "", 1)
+				project.Location = strings.Replace(trim(s.Text()), "Location:", "", 1)
+				project.Location = project.Location[1:] // remove first char, which isn't an ascii space
 				projects = append(projects, project)
 			}
 			return
@@ -118,7 +119,7 @@ func getProjects(url string) []ProjectUpdate {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			html = trim(html) // TODO we're parsing the spaced in between projects, probably shouldn't
+			html = trim(html) // TODO we're parsing the space in between projects, probably shouldn't
 			switch i {
 			case 0:
 				project.SetNameAndCode(html)
