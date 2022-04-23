@@ -35,7 +35,7 @@ func ForestJsonToCsv(config ForestJsonToCsvConfig) error {
 	}
 
 	filePath := "data/forest.csv"
-	err = writeForestCsv(filePath)
+	err = writeForestCsv(forests, filePath)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"file":  filePath,
@@ -45,7 +45,7 @@ func ForestJsonToCsv(config ForestJsonToCsvConfig) error {
 	}
 
 	filePath = "data/projects.csv"
-	err = writeProjectsCsv(filePath)
+	err = writeProjectsCsv(forests, filePath)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"file":  filePath,
@@ -55,7 +55,7 @@ func ForestJsonToCsv(config ForestJsonToCsvConfig) error {
 	}
 
 	filePath = "data/project_updates.csv"
-	err = writeProjectUpdatesCsv(filePath)
+	err = writeProjectUpdatesCsv(forests, filePath)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"file":  filePath,
@@ -68,16 +68,17 @@ func ForestJsonToCsv(config ForestJsonToCsvConfig) error {
 }
 
 // TODO(hank)
-func writeForestCsv(path string) error {
+func writeForestCsv(forests []Forest, path string) error {
 	return nil
 }
 
 // TODO(hank)
-func writeProjectsCsv(path string) error {
+func writeProjectsCsv(forests []Forest, path string) error {
 	return nil
 }
 
 // TODO(hank)
-func writeProjectUpdatesCsv(path string) error {
+func writeProjectUpdatesCsv(forests []Forest, path string) error {
+
 	return nil
 }
