@@ -76,7 +76,7 @@ func ParseUpdates(config ParseUpdatesConfig) error {
 }
 
 func getMostRecentDataSet(s3Service *s3.S3, bucketName string) ([]Forest, error) {
-	// list bucket elements and get the one with the greatest time stamp
+	// TODO(gasparovic): list bucket elements and get the one with the greatest time stamp
 	output, err := s3Service.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String("projectsdb.json"),
