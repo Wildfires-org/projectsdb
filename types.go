@@ -2,21 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/nyaruka/phonenumbers"
 	"log"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/nyaruka/phonenumbers"
 )
 
 var baseUrl = "https://www.fs.fed.us"
 
 type Forest struct {
-	State       string          `json:"state"`
 	Name        string          `json:"name"`
+	State       string          `json:"state"`
 	Url         string          `json:"url"`
 	Id          int             `json:"id"`
-	SopaReports []string        `json:"sopa_reports"`
 	Projects    []ProjectUpdate `json:"projects"`
+	SopaReports []string        `json:"sopa_reports"`
 }
 
 func (forest Forest) AsCsv() [][]string {
@@ -30,6 +32,7 @@ func (forest Forest) AsCsv() [][]string {
 	for _, project := range forest.Projects {
 		rows = append(rows, append(baseRow, []string{
 			project.Name,
+			project.Id,
 			strings.Join(project.Purposes, ", "),
 			project.Status,
 			project.Decision,
@@ -38,30 +41,47 @@ func (forest Forest) AsCsv() [][]string {
 			project.Contact.Email,
 			project.Contact.Phone,
 			project.Description,
-			project.Location,
 			project.WebLink,
+			project.Location,
 			project.Region,
 			project.District,
 			project.SopaReportDate,
+			project.ProjectCode,
 		}...))
 	}
 	return rows
 }
 
 type ProjectUpdate struct {
-	Name                   string   `json:"name"`
-	Purposes               []string `json:"purpose"`
-	Status                 string   `json:"status"`
-	Decision               string   `json:"decision"`
-	ExpectedImplementation string   `json:"expected_implementation"`
-	Contact                Contact  `json:"contact"`
-	Description            string   `json:"description"`
-	WebLink                string   `json:"web_link"`
-	Location               string   `json:"location"`
-	Region                 string   `json:"region"`
-	District               string   `json:"district"`
-	SopaReportDate         string   `json:"sopa_report_date"`
-	ProjectCode            string   `json:"project_code"`
+	Name                   string            `json:"name"`
+	Id                     string            `json:"id"`
+	Purposes               []string          `json:"purpose"`
+	Status                 string            `json:"status"`
+	Decision               string            `json:"decision"`
+	ExpectedImplementation string            `json:"expected_implementation"`
+	Contact                Contact           `json:"contact"`
+	Description            string            `json:"description"`
+	WebLink                string            `json:"web_link"`
+	Location               string            `json:"location"`
+	Region                 string            `json:"region"`
+	District               string            `json:"district"`
+	SopaReportDate         string            `json:"sopa_report_date"`
+	ProjectCode            string            `json:"project_code"`
+	ProjectDocuments       []ProjectDocument `json:"project_documents"`
+}
+
+type ProjectDocument struct {
+	DateString string    `json:"date_string"`
+	Date       time.Time `json:"date"`
+	Category   string    `json:"category"`
+	Name       string    `json:"name"`
+	Url        string    `json:"url"`
+}
+
+type Contact struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
 }
 
 func (project *ProjectUpdate) SetNameAndCode(html string) {
@@ -89,7 +109,6 @@ func (project *ProjectUpdate) SetStatus(html string) {
 func (project *ProjectUpdate) SetContacts(html string) {
 	contacts := strings.Split(html, "<br/>")
 	if len(contacts) != 3 {
-		fmt.Println(html)
 		log.Fatal("bad contacts")
 	}
 	var phone_string = contacts[1]                                             // TODO phonenumbers doesnt seem to handle numbers starting with 0 well
@@ -103,25 +122,28 @@ func (project *ProjectUpdate) SetContacts(html string) {
 }
 
 func (project *ProjectUpdate) SetSopaReportDateFromURL(url string) {
-	project.SopaReportDate = url[len(url)-12 : len(url)-5] // example url: https://www.fs.fed.us/sopa/components/reports/sopa-110519-2021-07.html
+	project.SopaReportDate = GetSopaReportDateFromURL(url)
+}
+
+func GetSopaReportDateFromURL(url string) string {
+	return url[len(url)-12 : len(url)-5] // example url: https://www.fs.fed.us/sopa/components/reports/sopa-110519-2021-07.html
 }
 
 var descriptionAndLink = regexp.MustCompile("Description:(.*)Web Link:(.*)")
+var getProjectID = regexp.MustCompile(`http.*project=(\d*)`)
 
 func (project *ProjectUpdate) SetDescription(text string) {
 	if matches := descriptionAndLink.FindStringSubmatch(text); len(matches) == 3 {
 		project.Description = matches[1]
-		project.WebLink = matches[2]
+		project.WebLink = trim(matches[2])
+		ids := getProjectID.FindStringSubmatch(project.WebLink)
+		if len(ids) > 1 {
+			project.Id = ids[1]
+		}
 	} else {
 		project.Description = strings.Replace(text, "Description:", "", 1)
 		project.Description = project.Description[1:] // remove first char, which isn't an ascii space
 	}
-}
-
-type Contact struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Phone string `json:"phone"`
 }
 
 var singleSpacePattern = regexp.MustCompile(`\s+`)

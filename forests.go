@@ -3,23 +3,19 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
+// GetForests goes to the naviation page of the USFS website
+// and pulls the name, state, id, and url for each forest.
+// This function only makes 1 web request
 func GetForests() ([]Forest, error) {
 	// get nav page html
-	res, err := http.Get(fmt.Sprintf("%s/sopa/nav-page.php", baseUrl))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
+	url := fmt.Sprintf("%s/sopa/nav-page.php", baseUrl)
+	res := get(url)
 
 	// load the HTML document into goquery document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -27,6 +23,8 @@ func GetForests() ([]Forest, error) {
 		log.Fatal(err)
 	}
 
+	// iterate through ul's while holding the context
+	// of what state container we're in
 	forests := []Forest{}
 	state := ""
 	doc.Find("table #content-table div").Last().Children().Each(func(i int, s *goquery.Selection) {
@@ -36,7 +34,7 @@ func GetForests() ([]Forest, error) {
 			s.Find("a").Each(func(i int, s *goquery.Selection) {
 				val, exists := s.Attr("href")
 				if !exists {
-					val = "brokenn"
+					val = ""
 				}
 				forests = append(forests, Forest{
 					State: state,
@@ -50,6 +48,8 @@ func GetForests() ([]Forest, error) {
 	return forests, nil
 }
 
+// getIdFromUri is parsing a url that looks like this
+// https://www.fs.fed.us/sopa/forest-level.php?110801
 func getIdFromUri(uri string) int {
 	split := strings.Split(uri, "?")
 	if len(split) != 2 {

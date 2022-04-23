@@ -3,76 +3,58 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/mmcdole/gofeed"
 )
 
-func GetProjects(forests []Forest) []Forest {
-	for i, forest := range forests {
-		fmt.Printf("looking into the {%s} of {%s}\n", forest.Name, forest.State)
-		projectPages := getProjectPages(forest.Url)
+// GetSopaReportPages goes to the page that lists the SOPA reports
+// for a particular forest
+// https://www.fs.fed.us/sopa/forest-level.php?110801
+func GetSopaReportPages(url string) ([]string, error) {
+	res := get(url)
 
-		for _, projectPage := range projectPages {
-			forests[i].Projects = append(forests[i].Projects, getProjects(projectPage)...)
-
-		}
-	}
-	return forests
-}
-
-func getProjectPages(url string) []string {
-	// get nav page html
-	res, err := http.Get(url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
-
-	// load the HTML document into goquery document
+	// Load the HTML document into goquery document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
+	// Parse page to get the links to each SOPA report
 	projectPages := []string{}
 	doc.Find("table table tbody td a").Each(func(i int, s *goquery.Selection) {
 		if strings.Contains(s.Text(), "html") {
 			val, exists := s.Attr("href")
 			if !exists {
-				val = "brokenn"
+				val = ""
 			}
 			projectPages = append(projectPages, fmt.Sprintf("%s%s", baseUrl, val))
 		}
 	})
-	return projectPages
+
+	return projectPages, nil
 }
 
-func getProjects(url string) []ProjectUpdate {
+func getProjects(url string) ([]ProjectUpdate, error) {
 	// get nav page html
-	res, err := http.Get(url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
+	res := get(url)
 
 	// load the HTML document into goquery document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var region []string // region and district
 	var project ProjectUpdate
 	projects := []ProjectUpdate{}
 	doc.Find("table tbody tr").Each(func(i int, s *goquery.Selection) {
+		if trim(s.Text()) == "No Projects matching your search criteria found..." {
+			return
+		}
 		// ignore first tree
 		if i < 3 {
 			return
@@ -136,5 +118,42 @@ func getProjects(url string) []ProjectUpdate {
 			}
 		})
 	})
-	return projects
+	return projects, nil
+}
+
+var getDate = regexp.MustCompile(`(\d\d-\d\d-\d\d\d\d)`)
+
+func getReportDocumentMeta(id string) ([]ProjectDocument, error) {
+	fp := gofeed.NewParser()
+	feed, err := fp.ParseURL(fmt.Sprintf(
+		"https://www.fs.usda.gov/wps/PA_Nepa/neparssgetfile?project=%s",
+		id,
+	))
+	if err != nil {
+		return []ProjectDocument{}, err
+	}
+
+	docs := []ProjectDocument{}
+	for _, item := range feed.Items {
+		if len(item.Link) > 0 {
+			split := strings.Split(item.Categories[len(item.Categories)-1], "/")
+			doc := ProjectDocument{
+				Name:     item.Title,
+				Url:      item.Link,
+				Category: split[len(split)-1],
+			}
+
+			if dateStrings := getDate.FindStringSubmatch(item.Description); len(dateStrings) == 2 {
+				doc.DateString = dateStrings[1]
+				date, err := time.Parse("01-02-2006", dateStrings[1])
+				if err == nil {
+					doc.Date = date
+				}
+			}
+
+			docs = append(docs, doc)
+		}
+	}
+
+	return docs, nil
 }

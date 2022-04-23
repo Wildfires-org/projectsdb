@@ -1,7 +1,10 @@
 /vendor/
+/data/
 .idea
 
 # default ignores for go:
+.DS_Store
+.env
 
 # Binaries for programs and plugins
 *.exe
