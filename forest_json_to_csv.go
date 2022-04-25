@@ -138,7 +138,48 @@ func writeProjectsCsv(forests []Forest, path string) error {
 		"Project Documents",
 	})
 
+	// dedupe forests first!!
+
 	// remove all but one project update
+	forestMap := make(map[int]Forest)
+	forestIdsToRemove := []int{}
+	// inital map
+	for i, forest := range forests {
+		// check if forest in map
+		if _, ok := forestMap[forest.Id]; !ok {
+			forestMap[forest.Id] = forest
+			forestIdsToRemove = append(forestIdsToRemove, i)
+		}
+	}
+
+	// build list of leftover forests TODO clean up
+	leftoverForests := []Forest{}
+	for i, forest := range forests {
+		shouldBeRemoved := false
+		for _, index := range forestIdsToRemove {
+			if index == i {
+				shouldBeRemoved = true
+			}
+		}
+		if !shouldBeRemoved {
+			leftoverForests = append(leftoverForests, forest)
+		}
+	}
+
+	// iterate through leftovers and add states
+	for _, forest := range leftoverForests {
+		if forestInMap, ok := forestMap[forest.Id]; ok {
+			forestInMap.State = forestInMap.State + ", " + forest.State
+			forestMap[forest.Id] = forestInMap
+		}
+	}
+
+	// rebuild forests list based on deduped map
+	forests = make([]Forest, len(forestMap))
+	for _, forest := range forestMap {
+		forests = append(forests, forest)
+	}
+
 	for i, _ := range forests {
 		projectMap := make(map[string]ProjectUpdate)
 		for j, _ := range forests[i].Projects {
@@ -148,7 +189,6 @@ func writeProjectsCsv(forests []Forest, path string) error {
 				mostRecentDate, _ := time.Parse("2006-01", mostRecentProjectUpdate.SopaReportDate)
 				currentProjectDate, _ := time.Parse("2006-01", currentProjectUpdate.SopaReportDate)
 				if mostRecentDate.Before(currentProjectDate) {
-					fmt.Printf("updating most recent project\n")
 					projectMap[currentProjectUpdate.Name] = currentProjectUpdate // found a more recent update
 				}
 			} else {
