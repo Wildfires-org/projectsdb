@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -42,11 +43,12 @@ func (forest Forest) AsCsv() [][]string {
 			project.Contact.Phone,
 			project.Description,
 			project.WebLink,
-			project.Location,
+			project.Location[10:],
 			project.Region,
 			project.District,
 			project.SopaReportDate,
 			project.ProjectCode,
+			getDocsAsString(project),
 		}...))
 	}
 	return rows
@@ -86,7 +88,7 @@ type Contact struct {
 
 func (project *ProjectUpdate) SetNameAndCode(html string) {
 	nameSplit := strings.Split(html, "<br/>")
-	project.Name = nameSplit[0] // TODO
+	project.Name = nameSplit[0]
 	if len(nameSplit) > 1 {
 		project.ProjectCode = nameSplit[1]
 	}
@@ -152,4 +154,17 @@ func trim(s string) string {
 	s = strings.TrimSpace(s)
 	s = singleSpacePattern.ReplaceAllString(s, " ")
 	return s
+}
+
+func getDocsAsString(project ProjectUpdate) string {
+	allDocs, _ := json.Marshal(project.ProjectDocuments)
+	return string(allDocs)
+}
+
+func (project *ProjectUpdate) cleanDescription() {
+	project.Description = project.Description[2:]
+	// Check for weird char - 189 is ascii for "1/2" as a single character
+	if project.Description[0] == 189 {
+		project.Description = project.Description[1:] // lop it off
+	}
 }
