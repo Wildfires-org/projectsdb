@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/alecthomas/kong"
 )
 
@@ -11,6 +9,7 @@ var cli struct {
 	ParseAllProjects struct{}              `cmd help:"Parse all projects avaliable and save to JSON"`
 	UploadDocuments  UploadDocumentsConfig `cmd help:"TODO"`
 	ForestJsonToCsv  ForestJsonToCsvConfig `cmd help:"TODO(hank)"`
+	Quick            struct{}              `cmd`
 }
 
 func main() {
@@ -29,9 +28,7 @@ func main() {
 	case "forest-json-to-csv":
 		ForestJsonToCsv(cli.ForestJsonToCsv)
 
-	default:
-		fmt.Println("Parser")
-	}
-	return
+	case "quick":
 
+	}
 }
