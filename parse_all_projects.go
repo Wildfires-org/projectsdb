@@ -21,69 +21,77 @@ func ParseAllProjects() error {
 	// For each forest, get the links to the SOPA reports,
 	// then parse those pages for project updates
 	for i, forest := range forests {
+		forests[i] = GetAllForestData(forest)
+		if i > 2 {
+			break
+		}
+	}
+
+	return saveProjectsJson(forests)
+}
+
+func GetAllForestData(forest Forest) Forest {
+	log.WithFields(log.Fields{
+		"forest": forest.Name,
+		"state":  forest.State,
+	}).Info("Looking for projects")
+
+	projectPages, err := GetSopaReportPages(forest.Url)
+	if err != nil {
 		log.WithFields(log.Fields{
 			"forest": forest.Name,
 			"state":  forest.State,
-		}).Info("Looking for projects")
+			"error":  err.Error(),
+		}).Error("Issue getting list of SOPA report urls")
+		return forest
+	}
 
-		projectPages, err := GetSopaReportPages(forest.Url)
+	for _, projectPage := range projectPages {
+		projects, err := getProjects(projectPage)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"forest": forest.Name,
 				"state":  forest.State,
+				"page":   projectPage,
 				"error":  err.Error(),
-			}).Error("Issue getting list of SOPA report urls")
-			continue
+			}).Error("Issue getting projects")
 		}
+		forest.Projects = append(forest.Projects, projects...)
+	}
 
-		for _, projectPage := range projectPages {
-			projects, err := getProjects(projectPage)
+	log.WithFields(log.Fields{
+		"forest": forest.Name,
+		"state":  forest.State,
+		"count":  len(forest.Projects),
+	}).Info("Found projects")
+
+	for j := range forest.Projects {
+		if len(forest.Projects[j].Id) > 0 {
+			log.WithFields(log.Fields{
+				"forest":  forest.Name,
+				"state":   forest.State,
+				"project": forest.Projects[j].Name,
+			}).Info("Getting documents")
+
+			docs, err := getReportDocumentMeta(forest.Projects[j].Id)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"forest": forest.Name,
-					"state":  forest.State,
-					"page":   projectPage,
-					"error":  err.Error(),
-				}).Error("Issue getting projects")
-			}
-			forests[i].Projects = append(forests[i].Projects, projects...)
-		}
-
-		log.WithFields(log.Fields{
-			"forest": forest.Name,
-			"state":  forest.State,
-			"count":  len(forests[i].Projects),
-		}).Info("Found projects")
-
-		for j := range forests[i].Projects {
-			if len(forests[i].Projects[j].Id) > 0 {
 				log.WithFields(log.Fields{
 					"forest":  forest.Name,
 					"state":   forest.State,
-					"project": forests[i].Projects[j].Name,
-				}).Info("Getting documents")
-
-				docs, err := getReportDocumentMeta(forests[i].Projects[j].Id)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"forest":  forest.Name,
-						"state":   forest.State,
-						"project": forests[i].Projects[j].Name,
-					}).Error("Issue getting documents")
-					continue
-				}
-
-				forests[i].Projects[j].ProjectDocuments = append(
-					forests[i].Projects[j].ProjectDocuments,
-					docs...,
-				)
-
+					"project": forest.Projects[j].Name,
+				}).Error("Issue getting documents")
+				continue
 			}
-		}
 
+			forest.Projects[j].ProjectDocuments = append(
+				forest.Projects[j].ProjectDocuments,
+				docs...,
+			)
+
+		}
 	}
 
-	return saveProjectsJson(forests)
+	return forest
 }
 
 func saveProjectsJson(forests []Forest) error {
