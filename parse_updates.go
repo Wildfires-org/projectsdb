@@ -78,7 +78,8 @@ func ParseUpdates(config ParseUpdatesConfig) error {
 
 		// if error, log, but do not fail
 		message := fmt.Sprintf(
-			"Found new <https://www.fs.fed.us/sopa/components/reports/sopa-110801-2020-04.html)|SOPA Report> for *%s* forest in *%s*",
+			"Found new <%s|SOPA Report> for *%s* forest in *%s*",
+			newSopaReportLink,
 			forest.Name,
 			forest.State,
 		)
@@ -260,7 +261,7 @@ func checkForUpdates(forest Forest) (bool, string, error) {
 		return false, "", nil
 	}
 
-	return true, pages[len(pages)-1], nil
+	return true, pages[0], nil
 }
 
 func insert(arr []string, elm string) []string {
