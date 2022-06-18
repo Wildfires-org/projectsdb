@@ -6,9 +6,10 @@ import (
 
 var cli struct {
 	ParseUpdates     ParseUpdatesConfig    `cmd help:"Pull current known data from file and parse for updates. If updates..."`
-	ParseAllProjects struct{}              `cmd help:"Parse all projects avaliable and save to JSON"`
+	ParseAllProjects struct{}              `cmd help:"Parse all projects available and save to JSON"`
 	UploadDocuments  UploadDocumentsConfig `cmd help:"TODO"`
-	ForestJsonToCsv  ForestJsonToCsvConfig `cmd help:"TODO(hank)"`
+	ForestJsonToCsv  ForestJsonToCsvConfig `cmd help:"Convert JSON blob into projects, project_updates, and Forests"`
+	PalsToCsv        PALSToCsvConfig       `cmd help: "Convert PALS csv into airtable readble csv"`
 	Quick            struct{}              `cmd`
 }
 
@@ -27,6 +28,9 @@ func main() {
 
 	case "forest-json-to-csv":
 		ForestJsonToCsv(cli.ForestJsonToCsv)
+
+	case "pals-to-csv":
+		PalsToCsv(cli.PalsToCsv)
 
 	case "quick":
 

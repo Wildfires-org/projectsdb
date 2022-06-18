@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
-	"io/ioutil"
-
+	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"os"
+	"time"
 )
 
 type ForestJsonToCsvConfig struct {
@@ -67,18 +70,194 @@ func ForestJsonToCsv(config ForestJsonToCsvConfig) error {
 	return nil
 }
 
-// TODO(hank)
 func writeForestCsv(forests []Forest, path string) error {
+	// open file
+	csvFile, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("failed creating file: %s", err)
+		return err
+	}
+	defer csvFile.Close()
+	// setup columns
+	writer := csv.NewWriter(csvFile)
+	writer.Write([]string{
+		"Forest Name",
+		"Forest State",
+		"Forest URL",
+		"Forest ID",
+	})
+	// build rows
+	for _, forest := range forests {
+		rows := [][]string{}
+		rows = append(rows, append([]string{
+			forest.Name,
+			forest.State,
+			forest.Url,
+			fmt.Sprint(forest.Id),
+		}, []string{}...))
+
+		// write rows to file
+		writer.WriteAll(rows)
+	}
+	writer.Flush()
 	return nil
 }
 
-// TODO(hank)
 func writeProjectsCsv(forests []Forest, path string) error {
+	// open file
+	csvFile, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("failed creating file: %s", err)
+		return err
+	}
+	defer csvFile.Close()
+
+	// build rows
+	writer := csv.NewWriter(csvFile)
+	writer.Write([]string{
+		"Forest Name",
+		"Forest State",
+		"Forest URL",
+		"Forest ID",
+		"Project Name",
+		"Project ID",
+		"Project Purposes",
+		"Project Status",
+		"Project Decision",
+		"Project Expected Implementation",
+		"Project Contact Name",
+		"Project Contact Email",
+		"Project Contact Phone",
+		"Project Description",
+		"Project Web Link",
+		"Project Location",
+		"Project Region",
+		"Project District",
+		"Project SOPA Report Date",
+		"Project Code",
+		"Project Documents",
+	})
+
+	// dedupe forests first!!
+
+	// remove all but one project update
+	forestMap := make(map[int]Forest)
+	forestIdsToRemove := []int{}
+	// inital map
+	for i, forest := range forests {
+		// check if forest in map
+		if _, ok := forestMap[forest.Id]; !ok {
+			forestMap[forest.Id] = forest
+			forestIdsToRemove = append(forestIdsToRemove, i)
+		}
+	}
+
+	// build list of leftover forests TODO clean up
+	leftoverForests := []Forest{}
+	for i, forest := range forests {
+		shouldBeRemoved := false
+		for _, index := range forestIdsToRemove {
+			if index == i {
+				shouldBeRemoved = true
+			}
+		}
+		if !shouldBeRemoved {
+			leftoverForests = append(leftoverForests, forest)
+		}
+	}
+
+	// iterate through leftovers and add states
+	for _, forest := range leftoverForests {
+		if forestInMap, ok := forestMap[forest.Id]; ok {
+			forestInMap.State = forestInMap.State + ", " + forest.State
+			forestMap[forest.Id] = forestInMap
+		}
+	}
+
+	// rebuild forests list based on deduped map
+	forests = make([]Forest, len(forestMap))
+	for _, forest := range forestMap {
+		forests = append(forests, forest)
+	}
+
+	for i, _ := range forests {
+		projectMap := make(map[string]ProjectUpdate)
+		for j, _ := range forests[i].Projects {
+			currentProjectUpdate := forests[i].Projects[j]
+			// check if exists in map
+			if mostRecentProjectUpdate, ok := projectMap[currentProjectUpdate.Name]; ok {
+				mostRecentDate, _ := time.Parse("2006-01", mostRecentProjectUpdate.SopaReportDate)
+				currentProjectDate, _ := time.Parse("2006-01", currentProjectUpdate.SopaReportDate)
+				if mostRecentDate.Before(currentProjectDate) {
+					projectMap[currentProjectUpdate.Name] = currentProjectUpdate // found a more recent update
+				}
+			} else {
+				// if not already in map add project
+				projectMap[currentProjectUpdate.Name] = currentProjectUpdate
+			}
+
+		}
+		forests[i].Projects = nil
+		for _, update := range projectMap {
+			update.cleanDescription()
+			forests[i].Projects = append(forests[i].Projects, update)
+		}
+	}
+
+	//write rows to file
+	for _, forest := range forests {
+		writer.WriteAll(forest.AsCsv())
+	}
+	writer.Flush()
 	return nil
 }
 
-// TODO(hank)
 func writeProjectUpdatesCsv(forests []Forest, path string) error {
+	// open file
+	csvFile, err := os.Create(path)
+	if err != nil {
+		log.Fatalf("failed creating file: %s", err)
+		return err
+	}
+	defer csvFile.Close()
 
+	// build rows
+	writer := csv.NewWriter(csvFile)
+	writer.Write([]string{
+		"Forest Name",
+		"Forest State",
+		"Forest URL",
+		"Forest ID",
+		"Project Name",
+		"Project ID",
+		"Project Purposes",
+		"Project Status",
+		"Project Decision",
+		"Project Expected Implementation",
+		"Project Contact Name",
+		"Project Contact Email",
+		"Project Contact Phone",
+		"Project Description",
+		"Project Web Link",
+		"Project Location",
+		"Project Region",
+		"Project District",
+		"Project SOPA Report Date",
+		"Project Code",
+		"Project Documents",
+	})
+
+	// clean up description
+	for i, _ := range forests {
+		for j, _ := range forests[i].Projects {
+			forests[i].Projects[j].cleanDescription()
+		}
+	}
+
+	//write rows to file
+	for _, forest := range forests {
+		writer.WriteAll(forest.AsCsv())
+	}
+	writer.Flush()
 	return nil
 }

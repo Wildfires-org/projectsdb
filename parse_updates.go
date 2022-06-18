@@ -134,13 +134,11 @@ func ParseUpdates(config ParseUpdatesConfig) error {
 					}).Error("Issue getting documents")
 					continue
 				}
-
-				uploadProjectToAirtable()
-
 				newProjects[j].ProjectDocuments = append(
 					newProjects[j].ProjectDocuments,
 					docs...,
 				)
+				uploadProjectToAirtable(forest, newProjects)
 
 			}
 		}
@@ -277,8 +275,14 @@ func insert(arr []string, elm string) []string {
 	return arr
 }
 
-func uploadProjectToAirtable() {
+func uploadProjectToAirtable(forest Forest, newProjects []ProjectUpdate) {
 	// TODO(hank)
+	// bundle into format ready for airtable?
+
+	// send to airtable?
+
+	// return error code if failed?
+
 }
 
 type SlackMessage struct {
